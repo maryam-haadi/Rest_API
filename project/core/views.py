@@ -1,4 +1,4 @@
-from django.shortcuts import render
+
 from django.shortcuts import render,get_object_or_404
 from rest_framework.permissions import AllowAny,IsAuthenticated,IsAdminUser
 from django.core.exceptions import ObjectDoesNotExist
@@ -15,7 +15,7 @@ from datetime import  timedelta, datetime
 
 
 
-class accountviewset(ModelViewSet):
+class accountviewset(ListModelMixin,CreateModelMixin,RetrieveModelMixin,UpdateModelMixin,GenericViewSet): #for add acoount and update account and retrive account
     http_method_names=['get','post','patch']
 
     permission_classes=[IsAuthenticated]
@@ -59,8 +59,19 @@ class transactions(ModelViewSet):
             return UpdateTransaction
         
 
-    def get_serializer_context(self):
-        return {'user_id':self.request.user.id}    
+    def get_serializer_context(self,pk):
+        return {'user_id':self.request.user.id,'t_id':pk} 
+
+    def destroy(self, request,pk):
+
+        transaction=Transaction.objects.get(pk=pk)
+        account=transaction.account
+        account.balance-=transaction.transaction_value
+        account.save()
+        transaction.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+           
 
 
 

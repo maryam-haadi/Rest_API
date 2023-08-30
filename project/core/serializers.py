@@ -114,15 +114,44 @@ class UpdateTransaction(serializers.ModelSerializer):
         model=Transaction
         fields=['transaction_value','description','account']
 
-    def save(self,validated_data):
 
-        user=User.objects.get(id=self.context['user_id'])
-        transaction=Transaction.objects.create(user=user,**validated_data)
+    def validate(self,attrs):
+        instance=Transaction.objects.get(pk=self.context['pk'])
+
+        old_transaction_value=instance.transaction_value
+        new_transaction_value=attrs['transaction_value']
+
+        account=attrs['account']
+
+        value=old_transaction_value - new_transaction_value
+        amount=account.balance - value
+        if amount < 0:
+            raise serializers.ValidationError("you can not this update! because your balance is not enough")
+
+        return attrs
+
+            
+
+
+
+    def update(self, instance, validated_data):
+        old_transaction_value=instance.transaction_value
+        new_transaction_value=validated_data['transaction_value']
+
         account=validated_data['account']
-        trans_value=validated_data['transaction_value']
-        account.balance+=trans_value
+
+        value=old_transaction_value - new_transaction_value
+        account.balance -=value
         account.save()
-        return transaction
+
+        instance.transaction_value=new_transaction_value
+        instance.description=validated_data['description']
+        instance.account=account
+
+        instance.save()
+        return instance
+    
+    
 
 
 
