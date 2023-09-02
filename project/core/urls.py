@@ -15,7 +15,6 @@ router.register('account',accountviewset,basename='account')
 
 
 
-
 urlpatterns=[
 
     path('',include(router.urls))

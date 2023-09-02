@@ -6,15 +6,19 @@ from .models import *
 
 
 
+
 class UserCreateSerializer(BaseUserCreateSerializer):
     class Meta(BaseUserCreateSerializer.Meta):
-        fields=['id','username','password','email']
+        fields=['id','username','password','email','first_name','last_name','phone']
     
     
     def create(self,validated_data):
-        user = User.objects.create(is_active=True,**validated_data)
+        user = User.objects.create(**validated_data)
+        # user=super().create(validated_data)
+        user.set_password(validated_data['password'])
         user.is_active=True
         user.save()
+        account=Account.objects.create(user=user)
         return user
 
         
@@ -22,7 +26,7 @@ class UserCreateSerializer(BaseUserCreateSerializer):
 class UserSerializer(BaseUserSerializer):
 
     class Meta(BaseUserSerializer.Meta):
-        fields=['id','username','email']
+        fields=['id','username','email','phone']
 
 
 
@@ -35,13 +39,16 @@ class ShowAccountSerializer(serializers.ModelSerializer):
 
     class Meta:
         model=Account
-        fields=['id','user','first_name','last_name','balance','phone','deposits','expenses']
+        fields=['id','user','balance','deposits','expenses']
 
     def total_deposits(self,account:Account):
         total=0
-        accounts=Account.objects.filter(user_id=self.context['user_id'])
-        for acount in accounts:
-            total+=acount.balance
+
+
+        transactions=Transaction.objects.filter(user_id=self.context['user_id'],account=account)
+        for transaction in transactions:
+            if transaction.transaction_value > 0 :
+                total +=transaction.transaction_value
         return total   
 
     def total_expenses(self,account:Account):
@@ -56,24 +63,11 @@ class ShowAccountSerializer(serializers.ModelSerializer):
 
     
 
-class AddAcoountSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model=Account
-        fields=['first_name','last_name','phone','balance']
-
-    def create(self, validated_data):
-        account=Account.objects.create(user_id=self.context['user_id'], **validated_data)
-        return account    
 
 
-class UpdateAccountSerializer(serializers.ModelSerializer):
 
-    class Meta:
-        model=Account
-        fields=['first_name','last_name','phone','balance']
 
-        
+
 
 class ShowTransactionSerializer(serializers.ModelSerializer):
 
@@ -81,26 +75,29 @@ class ShowTransactionSerializer(serializers.ModelSerializer):
         model=Transaction
         fields='__all__'
 
+
+
+
 class AddTransactionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model=Transaction
-        fields=['transaction_value','description','account']
+        fields=['transaction_value','description']
 
 
     def validate(self, attrs):
-        if attrs['account'] not in Account.objects.filter(user=self.context['user_id']):
-            raise serializers.ValidationError("this account is not for you!")
-        
-        if attrs['account'].balance + attrs['transaction_value'] < 0:
+        user=User.objects.get(id=self.context['user_id'])
+        account=Account.objects.filter(user=user).first()
+
+        if account.balance + attrs['transaction_value'] < 0:
             raise serializers.ValidationError("insufficient inventory!")
         
         return attrs
 
     def create(self, validated_data):
         user=User.objects.get(id=self.context['user_id'])
-        transaction=Transaction.objects.create(user=user,**validated_data)
-        account=validated_data['account']
+        account=Account.objects.filter(user=user).first()
+        transaction=Transaction.objects.create(user=user,**validated_data,account=account)
         trans_value=validated_data['transaction_value']
         account.balance+=trans_value
         account.save()
@@ -108,20 +105,25 @@ class AddTransactionSerializer(serializers.ModelSerializer):
 
 
 
-class UpdateTransaction(serializers.ModelSerializer):
 
+class UpdateTransaction(serializers.ModelSerializer):
     class Meta:
         model=Transaction
-        fields=['transaction_value','description','account']
+        fields=['id','transaction_value','description']
+
 
 
     def validate(self,attrs):
-        instance=Transaction.objects.get(pk=self.context['pk'])
+       
+        instance=Transaction.objects.filter(id=attrs['id']).first()
+        if instance is None:
+             raise serializers.ValidationError("you can not this update!")
+
 
         old_transaction_value=instance.transaction_value
         new_transaction_value=attrs['transaction_value']
 
-        account=attrs['account']
+        account=Account.objects.filter(user=self.context['user_id']).first()
 
         value=old_transaction_value - new_transaction_value
         amount=account.balance - value
@@ -138,7 +140,7 @@ class UpdateTransaction(serializers.ModelSerializer):
         old_transaction_value=instance.transaction_value
         new_transaction_value=validated_data['transaction_value']
 
-        account=validated_data['account']
+        account=Account.objects.filter(user=self.context['user_id']).first()
 
         value=old_transaction_value - new_transaction_value
         account.balance -=value
@@ -146,7 +148,7 @@ class UpdateTransaction(serializers.ModelSerializer):
 
         instance.transaction_value=new_transaction_value
         instance.description=validated_data['description']
-        instance.account=account
+        
 
         instance.save()
         return instance

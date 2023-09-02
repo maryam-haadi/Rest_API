@@ -15,10 +15,10 @@ from datetime import  timedelta, datetime
 
 
 
-class accountviewset(ListModelMixin,CreateModelMixin,RetrieveModelMixin,UpdateModelMixin,GenericViewSet): #for add acoount and update account and retrive account
-    http_method_names=['get','post','patch']
+class accountviewset(ListModelMixin,GenericViewSet): 
 
     permission_classes=[IsAuthenticated]
+    serializer_class=ShowAccountSerializer
 
     def get_queryset(self):
         return Account.objects.filter(user_id=self.request.user.id)
@@ -26,15 +26,6 @@ class accountviewset(ListModelMixin,CreateModelMixin,RetrieveModelMixin,UpdateMo
     def get_serializer_context(self):
         return {'user_id':self.request.user.id}
 
-
-
-    def get_serializer_class(self):
-        if self.request.method=='GET':
-            return ShowAccountSerializer
-        elif self.request.method=='POST':
-            return AddAcoountSerializer
-        elif self.request.method=='PATCH':
-            return UpdateAccountSerializer
 
 
 
@@ -59,8 +50,8 @@ class transactions(ModelViewSet):
             return UpdateTransaction
         
 
-    def get_serializer_context(self,pk):
-        return {'user_id':self.request.user.id,'t_id':pk} 
+    def get_serializer_context(self):
+        return {'user_id':self.request.user.id} 
 
     def destroy(self, request,pk):
 
