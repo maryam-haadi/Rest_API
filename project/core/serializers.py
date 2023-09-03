@@ -88,6 +88,8 @@ class AddTransactionSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         user=User.objects.get(id=self.context['user_id'])
         account=Account.objects.filter(user=user).first()
+        if account is None:
+            account=Account.objects.create(user=user)
 
         if account.balance + attrs['transaction_value'] < 0:
             raise serializers.ValidationError("insufficient inventory!")
@@ -97,6 +99,9 @@ class AddTransactionSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user=User.objects.get(id=self.context['user_id'])
         account=Account.objects.filter(user=user).first()
+        if account is None:
+            account=Account.objects.create(user=user)
+
         transaction=Transaction.objects.create(user=user,**validated_data,account=account)
         trans_value=validated_data['transaction_value']
         account.balance+=trans_value
