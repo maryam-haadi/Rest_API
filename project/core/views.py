@@ -11,7 +11,7 @@ from .serializers import *
 from rest_framework.response import Response
 from datetime import  timedelta, datetime
 from django_filters.rest_framework import DjangoFilterBackend 
-from rest_framework.filters import OrderingFilter
+from rest_framework.filters import SearchFilter , OrderingFilter
 from .filters import *
 from .permission import TransactionPermission
 # Create your views here.
@@ -40,12 +40,14 @@ class transactions(ModelViewSet):
 
     http_method_names=['get','post','patch','delete']
 
-    permission_classes=[TransactionPermission,]
+    # permission_classes=[TransactionPermission,]
+    permission_classes=[IsAuthenticated]
 
-    filter_backends=[DjangoFilterBackend,OrderingFilter]
+    filter_backends=[DjangoFilterBackend,OrderingFilter,SearchFilter]
     filterset_fields=['transaction_value']
     filterset_class = TransactionFilter
     Ordering_fields=['recorde_date','transaction_value']
+    search_fields=['description']
 
     def get_queryset(self):
         return Transaction.objects.filter(user__id=self.request.user.id)
