@@ -13,9 +13,9 @@ class UserCreateSerializer(BaseUserCreateSerializer):
     
     
     def create(self,validated_data):
+        password = validated_data.pop('password')
         user = User.objects.create(**validated_data)
-        # user=super().create(validated_data)
-        user.set_password(validated_data['password'])
+        user.set_password(password)
         user.is_active=True
         user.save()
         account=Account.objects.create(user=user)

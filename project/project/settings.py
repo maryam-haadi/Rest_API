@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'core',
     'rest_framework',
     'djoser',
+    'django_filters',
     
 ]
 
@@ -153,9 +154,13 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
     ],
 
+    # 'DEFAULT_PERMISSION_CLASSES': ( 'rest_framework.permissions.IsAdminUser', ),
+
         'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'], 
 
 
 }
